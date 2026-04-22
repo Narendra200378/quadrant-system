@@ -1025,6 +1025,18 @@ function applyFilters() {
         }
         return matchesSearch && matchesEmp && matchesDate;
     });
+
+    // Sort: today's date first, then rest by date descending
+    const todaySortISO = getTodayISO();
+    filteredVisitors.sort((a, b) => {
+        const da = a.date ? a.date.split('T')[0] : '';
+        const db = b.date ? b.date.split('T')[0] : '';
+        const aToday = da === todaySortISO ? 1 : 0;
+        const bToday = db === todaySortISO ? 1 : 0;
+        if (aToday !== bToday) return bToday - aToday; // today first
+        return db.localeCompare(da); // then newest first
+    });
+
     updateCounts(filteredVisitors);
     renderPage();
 }
