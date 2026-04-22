@@ -92,12 +92,24 @@
 
         @keyframes spin { to { transform:rotate(360deg); } }
         @keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:.4;} }
+        @keyframes toastIn { from { opacity:0; transform:translateY(20px) scale(0.96); } to { opacity:1; transform:translateY(0) scale(1); } }
         .spinner { width:36px; height:36px; border:4px solid #dde3ea; border-top-color:#1e5f74; border-radius:50%; animation:spin .8s linear infinite; }
     </style>
 </head>
 <body>
 
 <!-- ════════════════════ LOGIN ════════════════════ -->
+<!-- Login Error Overlay -->
+<div id="loginErrorOverlay" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:200;background:rgba(90,90,90,0.5);">
+    <div style="background:#22263a;color:white;border-radius:12px;padding:26px 32px 22px 26px;width:480px;max-width:92vw;position:absolute;top:10px;left:50%;transform:translateX(-50%);box-shadow:0 2px 16px rgba(0,0,0,0.3);">
+        <p style="font-size:15px;font-weight:600;margin:0 0 6px 0;line-height:1.5;">Incorrect credentials</p>
+        <p id="loginErrorText" style="font-size:13.5px;font-weight:400;margin:0 0 22px 0;color:#c8cdd8;line-height:1.6;">Please check your Admin ID and Name.</p>
+        <div style="text-align:right;">
+            <button onclick="closeLoginError()" style="background:#dde3f0;color:#1e2330;border:none;padding:9px 34px;border-radius:50px;font-size:13.5px;font-weight:600;cursor:pointer;">OK</button>
+        </div>
+    </div>
+</div>
+
 <div id="loginScreen" class="login-bg fixed inset-0 flex items-center justify-center z-50 overflow-hidden">
     <div style="position:absolute;top:-100px;left:-100px;width:400px;height:400px;background:radial-gradient(circle,rgba(124,58,237,.4),transparent 70%);border-radius:50%;pointer-events:none;"></div>
     <div style="position:absolute;bottom:-80px;right:-80px;width:350px;height:350px;background:radial-gradient(circle,rgba(245,87,246,.35),transparent 70%);border-radius:50%;pointer-events:none;"></div>
@@ -115,8 +127,8 @@
                 <input id="loginName" class="login-input" placeholder="Enter your full name">
             </div>
             <div>
-                <label class="login-label">Employee ID</label>
-                <input id="loginEmpId" class="login-input" placeholder="e.g. QT-ADMIN-001" onkeydown="if(event.key==='Enter')performLogin()">
+                <label class="login-label">Admin Id</label>
+                <input id="loginEmpId" class="login-input" onkeydown="if(event.key==='Enter')performLogin()">
             </div>
             <button id="loginBtn" onclick="performLogin()" class="brand-gradient w-full text-white font-bold py-4 rounded-2xl text-base shadow-xl hover:opacity-90 transition-opacity" style="margin-top:4px;">
                 🔐 Login to Admin Portal
@@ -361,6 +373,30 @@
     </div>
 </div>
 
+<!-- ════════════════════ AADHAAR NOT FOUND MODAL ════════════════════ -->
+<div id="aadhaarInfoModal" class="hidden fixed inset-0 modal-overlay flex items-center justify-center z-[160]">
+    <div class="modal-card w-full max-w-sm shadow-2xl overflow-hidden">
+        <div class="flex justify-between items-center px-6 py-5" style="background:linear-gradient(135deg,#1e2a3a,#2d3f52);">
+            <h2 class="text-base font-bold text-white">🪪 Aadhaar Status</h2>
+            <button onclick="closeAadhaarInfoModal()" class="text-white/70 hover:text-white text-3xl font-bold leading-none">×</button>
+        </div>
+        <div class="p-6">
+            <div style="background:#fef3c7;border-radius:14px;padding:16px 18px;border-left:4px solid #f59e0b;margin-bottom:16px;">
+                <p class="text-xs font-bold text-amber-700 mb-1">Visitor ID</p>
+                <p id="aadhaarInfoVisitorId" class="font-mono font-bold text-amber-900 text-sm"></p>
+            </div>
+            <div style="display:flex;align-items:flex-start;gap:12px;background:#fff7ed;border-radius:12px;padding:14px 16px;margin-bottom:20px;">
+                <span style="font-size:22px;line-height:1;">⚠️</span>
+                <div>
+                    <p class="font-bold text-sm text-orange-800 mb-1" id="aadhaarInfoTitle">Aadhaar Not Found</p>
+                    <p class="text-sm text-orange-700 leading-snug" id="aadhaarInfoMsg"></p>
+                </div>
+            </div>
+            <button onclick="closeAadhaarInfoModal()" class="w-full py-3 font-bold rounded-xl text-sm text-white transition-opacity hover:opacity-90" style="background:linear-gradient(135deg,#1e2a3a,#2d3f52);">OK</button>
+        </div>
+    </div>
+</div>
+
 <!-- ════════════════════ REGISTER MODAL ════════════════════ -->
 <div id="registerModal" class="hidden fixed inset-0 modal-overlay flex items-center justify-center z-[120]">
     <div class="modal-card w-full max-w-md shadow-2xl overflow-hidden">
@@ -406,7 +442,7 @@
             </div>
             <div>
                 <label class="block text-xs font-bold text-gray-600 mb-1.5">New Date <span class="text-red-500">*</span></label>
-                <input type="date" id="rsNewDate" class="w-full px-4 py-2.5 border-2 border-gray-200 focus:border-purple-500 rounded-xl outline-none transition-colors text-sm">
+                <input type="date" id="rsNewDate" class="w-full px-4 py-2.5 border-2 border-gray-200 focus:border-purple-500 rounded-xl outline-none transition-colors text-sm" min="">
             </div>
             <div>
                 <label class="block text-xs font-bold text-gray-600 mb-1.5">New Time <span class="text-red-500">*</span></label>
@@ -595,7 +631,7 @@ function exportCSV(){
         const isFiltered=(document.getElementById('searchInput').value.trim()||document.getElementById('statusFilter').value||calStartDate);
         filename = `visitors_${isFiltered?'filtered_':''}${new Date().toISOString().split('T')[0]}.csv`;
     }
-    if(!dataToExport.length)return alert('No data to export');
+    if(!dataToExport.length)return showToast('warning','⚠️ No Data','No data to export.');
     const headers=['S.No','Visitor ID','Name','Email','Entry Date','Purpose','Employee','In Time','Out Time','Duration','Status'];
     const rows=dataToExport.map((v,i)=>[
         i+1,v.visitor_id,v.name||'',v.email||'',
@@ -612,7 +648,7 @@ function exportCSV(){
 
 // ── AADHAAR ───────────────────────────────────────────────
 async function viewAadhaar(visitor_id){
-    if(!visitor_id)return alert('No visitor ID found');
+    if(!visitor_id)return showToast('warning','⚠️ Error','No visitor ID found.');
     try{
         const res=await fetch(`${API_BASE}/aadhaar?visitor_id=${visitor_id}`,{mode:'cors'});
         const data=await res.json();
@@ -625,12 +661,21 @@ async function viewAadhaar(visitor_id){
             }
             document.getElementById('aadhaarNumberDisplay').innerText=`Visitor ID: ${visitor_id}`;
             document.getElementById('aadhaarModal').classList.remove('hidden');
-        }else alert(`No Aadhaar found for ${visitor_id}: ${data.error||'Not uploaded'}`);
-    }catch(e){alert('Error loading Aadhaar: '+e.message);}
+        }else showAadhaarNotFound(visitor_id, data.error||'No Aadhaar document found for this visitor');
+    }catch(e){showAadhaarNotFound(visitor_id,'Error loading Aadhaar: '+e.message);}
 }
 function closeAadhaarModal(){
     document.getElementById('aadhaarModal').classList.add('hidden');
     document.getElementById('aadhaarPreviewArea').innerHTML='<p class="text-gray-400 text-sm">Loading Aadhaar...</p>';
+}
+function showAadhaarNotFound(visitor_id, msg){
+    document.getElementById('aadhaarInfoTitle').textContent='Aadhaar Not Found';
+    document.getElementById('aadhaarInfoVisitorId').textContent=visitor_id||'';
+    document.getElementById('aadhaarInfoMsg').textContent=msg||'No Aadhaar document found for this visitor.';
+    document.getElementById('aadhaarInfoModal').classList.remove('hidden');
+}
+function closeAadhaarInfoModal(){
+    document.getElementById('aadhaarInfoModal').classList.add('hidden');
 }
 
 // ── RENDER TABLE ──────────────────────────────────────────
@@ -868,7 +913,7 @@ async function rejectVisitorDirect(id, email){
 async function submitReject(){
     const visitorId=document.getElementById('rrVisitorId').textContent.trim();
     const reason=document.getElementById('rejectReason').value.trim();
-    if(!reason){alert('Please enter a reason for rejection.');return;}
+    if(!reason){showToast('warning','⚠️ Required','Please enter a reason for rejection.');return;}
     const btn=document.getElementById('rejectSubmitBtn');
     btn.innerHTML='⏳ Processing...';
     btn.disabled=true;
@@ -924,7 +969,7 @@ function updateLastRefreshedTime(){
 async function performLogin(){
     const name=document.getElementById('loginName').value.trim();
     const empId=document.getElementById('loginEmpId').value.trim();
-    if(!name||!empId){alert('Please enter both name and Employee ID');return;}
+    if(!name||!empId){ showLoginError("Please enter both Admin ID and Name."); return; }
     const btn=document.getElementById('loginBtn');
     const orig=btn.innerHTML;
     btn.innerHTML='⏳ Verifying...';
@@ -957,19 +1002,22 @@ async function performLogin(){
             startAutoRefresh();
             updateLastRefreshedTime();
         } else {
-            btn.innerHTML='❌ Invalid Credentials';
-            btn.style.background='linear-gradient(135deg,#dc2626,#ef4444)';
-            setTimeout(()=>{btn.innerHTML=orig;btn.style.background='';},2200);
+            btn.innerHTML=orig;
+            showLoginError("Please check your Admin ID and Name.");
         }
     }catch(e){
-        btn.innerHTML='❌ Server Error';
-        btn.style.background='linear-gradient(135deg,#dc2626,#ef4444)';
-        btn.style.opacity='1';
+        btn.innerHTML=orig;
         btn.disabled=false;
-        setTimeout(()=>{btn.innerHTML=orig;btn.style.background='';},2500);
+        btn.style.opacity='1';
+        showLoginError("Cannot connect to server. Please try again.");
         console.error('Login error:',e);
     }
 }
+function showLoginError(msg) {
+    document.getElementById('loginErrorText').textContent = msg;
+    document.getElementById('loginErrorOverlay').style.display = 'block';
+}
+function closeLoginError() { document.getElementById('loginErrorOverlay').style.display = 'none'; }
 function logout(){location.reload();}
 function toggleProfileMenu(){document.getElementById('profileDropdown').classList.toggle('hidden');}
 
@@ -984,7 +1032,7 @@ async function registerUser(){
     const name=document.getElementById('regName').value.trim();
     const empId=document.getElementById('regEmpId').value.trim();
     const role=document.getElementById('regRole').value;
-    if(!name||!empId||!role){alert('Please fill all fields');return;}
+    if(!name||!empId||!role){showToast('warning','⚠️ Required','Please fill all fields.');return;}
     try{
         const res=await fetch(`${API_BASE}/user`,{
             method:'POST',mode:'cors',
@@ -993,17 +1041,17 @@ async function registerUser(){
         });
         const data=await res.json().catch(()=>({}));
         if(res.ok){
-            alert(`✅ User "${name}" registered!\nID: ${empId} | Role: ${role}`);
+            showToast('success',`✅ User Registered`,`"${name}" added.\nID: ${empId} | Role: ${role}`);
             document.getElementById('regName').value='';
             document.getElementById('regEmpId').value='';
             document.getElementById('regRole').value='';
             closeRegisterModal();
             if(!document.getElementById('userListModal').classList.contains('hidden'))loadUserList();
         }else{
-            alert(`❌ Registration failed: ${data.error||data.message||res.status}`);
+            showToast('error','❌ Registration Failed', data.error||data.message||res.status);
         }
     }catch(e){
-        alert('❌ Network/CORS error. Check console.');
+        showToast('error','❌ Network Error','CORS error. Check console.');
         console.error(e);
     }
 }
@@ -1078,7 +1126,7 @@ async function loadUserList(){
 }
 
 async function removeUser(empId){
-    if(!empId)return alert('No Employee ID found');
+    if(!empId)return showToast('warning','⚠️ Error','No Employee ID found.');
     if(!confirm(`Remove user "${empId}"? They will no longer be able to login.`))return;
     try{
         const res=await fetch(`${API_BASE}/user`,{
@@ -1089,17 +1137,17 @@ async function removeUser(empId){
         if(res.ok){
             const row=document.getElementById(`userrow-${empId}`);
             if(row)row.remove();
-            alert(`✅ User "${empId}" removed successfully.`);
+            showToast('success','✅ User Removed',`"${empId}" has been removed.`);
         }else{
             const data=await res.json().catch(()=>({}));
             if(res.status===404||res.status===405){
-                alert(`⚠️ Auto-delete not configured.\n\nManual:\n1. AWS Console → DynamoDB → Employees\n2. Find emp_id = "${empId}"\n3. Actions → Delete item`);
+                showToast('warning','⚠️ Manual Delete Required',`Auto-delete not configured.\nGo to AWS DynamoDB → Employees → Find emp_id "${empId}" → Delete item.`);
             }else{
-                alert(`❌ Failed: ${data.error||res.status}`);
+                showToast('error','❌ Failed', data.error||res.status);
             }
         }
     }catch(e){
-        alert(`⚠️ Lambda DELETE error.\n\nTo remove "${empId}" manually:\n1. AWS Console → DynamoDB → Employees\n2. Find emp_id: "${empId}"\n3. Actions → Delete item`);
+        showToast('warning','⚠️ Manual Delete Required',`Lambda DELETE error.\nGo to AWS DynamoDB → Employees → Find emp_id "${empId}" → Delete item.`);
     }
 }
 
@@ -1110,8 +1158,12 @@ function openRescheduleModal(visitorId, currentDate, currentPurpose, email, visi
     _rsEmail   = email       || '';
     _rsName    = visitorName || '';
     _rsEmpName = empName     || '';
-    const today = new Date().toISOString().split('T')[0];
-    document.getElementById('rsNewDate').value    = currentDate ? currentDate.split('T')[0] : today;
+    const today = new Date().toLocaleDateString('sv-SE', {timeZone:'Asia/Kolkata'});
+    const dateInput = document.getElementById('rsNewDate');
+    dateInput.min = today;
+    dateInput.setAttribute('min', today);
+    const picked = currentDate ? currentDate.split('T')[0] : today;
+    dateInput.value = picked < today ? today : picked;
     document.getElementById('rsNewTime').value    = '';
     document.getElementById('rsNewPurpose').value = currentPurpose || '';
     document.getElementById('rescheduleModal').classList.remove('hidden');
@@ -1125,7 +1177,18 @@ async function submitReschedule(){
     const newTime    = document.getElementById('rsNewTime').value;
     const newPurpose = document.getElementById('rsNewPurpose').value.trim();
     if(!newDate || !newTime){
-        alert('Please select both a new date and time.');
+        showToast('warning','⚠️ Required','Please select both a new date and time.');
+        return;
+    }
+    const today = new Date().toLocaleDateString('sv-SE', {timeZone:'Asia/Kolkata'});
+    if(newDate < today){
+        showToast('error','❌ Invalid Date','Cannot reschedule to a past date. Please select today or a future date.');
+        document.getElementById('rsNewDate').value = today;
+        return;
+    }
+    const todayIST = new Date().toLocaleDateString('sv-SE', {timeZone:'Asia/Kolkata'});
+    if(newDate < todayIST){
+        showToast('error','❌ Invalid Date','Cannot reschedule to a past date. Please choose today or a future date.');
         return;
     }
     try{
@@ -1156,19 +1219,42 @@ async function submitReschedule(){
                     },'igCWPsq9KtiQm0xxt');
                 }catch(mailErr){ console.error('Reschedule email error:',mailErr); }
             }
-            alert(`✅ Visit rescheduled successfully!\nDate: ${newDate} | Time: ${newTime}`);
+            showToast('success', '✅ Visit Rescheduled!', `Date: ${newDate} | Time: ${newTime}`);
             closeRescheduleModal();
             renderTable();
         } else {
-            alert(`❌ Reschedule failed: ${data.error || data.message || res.status}`);
+            showToast('error', '❌ Reschedule Failed', data.error || data.message || `Error ${res.status}`);
         }
     } catch(e){
-        alert('❌ Network error: ' + e.message);
+        showToast('error', '❌ Network Error', e.message);
         console.error(e);
     }
 }
 
-// ── CLOSE ON OUTSIDE CLICK ────────────────────────────────
+// ── TOAST NOTIFICATION ───────────────────────────────────
+function showToast(type, title, message){
+    const colors = {
+        success: { bg:'linear-gradient(135deg,#059669,#10b981)', icon:'✅', border:'#6ee7b7' },
+        error:   { bg:'linear-gradient(135deg,#dc2626,#ef4444)', icon:'❌', border:'#fca5a5' },
+        warning: { bg:'linear-gradient(135deg,#d97706,#f59e0b)', icon:'⚠️', border:'#fcd34d' },
+        info:    { bg:'linear-gradient(135deg,#1e2a3a,#2d3f52)', icon:'ℹ️', border:'#94a3b8' },
+    };
+    const c = colors[type] || colors.info;
+    const toast = document.getElementById('toastNotification');
+    document.getElementById('toastIcon').textContent = c.icon;
+    document.getElementById('toastTitle').textContent = title;
+    document.getElementById('toastMsg').textContent = message || '';
+    toast.style.background = c.bg;
+    toast.style.borderColor = c.border;
+    toast.style.display = 'flex';
+    toast.style.animation = 'toastIn .25s cubic-bezier(.4,0,.2,1)';
+    clearTimeout(window._toastTimer);
+    window._toastTimer = setTimeout(()=>closeToast(), 4000);
+}
+function closeToast(){
+    const t = document.getElementById('toastNotification');
+    if(t) t.style.display = 'none';
+}
 document.addEventListener('click',function(e){
     const w=document.getElementById('calWrapper');
     if(w&&!w.contains(e.target)){document.getElementById('calPopup').classList.remove('show');document.getElementById('calTrigger').classList.remove('active');}
@@ -1575,5 +1661,14 @@ function renderMonthView() {
 
 // ── Hook removed: updateWeekBreakdown is called inside renderTable directly ──
 </script>
+<!-- ════════════════════ TOAST NOTIFICATION ════════════════════ -->
+<div id="toastNotification" style="display:none;position:fixed;bottom:28px;right:28px;z-index:9999;min-width:300px;max-width:400px;border-radius:18px;border:1.5px solid #6ee7b7;padding:16px 20px;align-items:flex-start;gap:14px;box-shadow:0 12px 36px rgba(0,0,0,0.22);color:white;">
+    <span id="toastIcon" style="font-size:22px;line-height:1;flex-shrink:0;margin-top:1px;"></span>
+    <div style="flex:1;min-width:0;">
+        <p id="toastTitle" style="font-size:14px;font-weight:700;margin:0 0 3px 0;line-height:1.3;"></p>
+        <p id="toastMsg" style="font-size:12.5px;font-weight:400;margin:0;opacity:0.88;line-height:1.5;white-space:pre-line;"></p>
+    </div>
+    <button onclick="closeToast()" style="flex-shrink:0;background:rgba(255,255,255,0.18);border:none;color:white;width:24px;height:24px;border-radius:50%;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;margin-top:-2px;" onmouseover="this.style.background='rgba(255,255,255,0.3)'" onmouseout="this.style.background='rgba(255,255,255,0.18)'">×</button>
+</div>
 </body>
 </html>
