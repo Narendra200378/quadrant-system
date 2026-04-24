@@ -204,7 +204,7 @@
                         </div>
                         <div>
                             <label class="field-label">Mobile Number <span class="text-red-400">(10 digits)</span></label>
-                            <input id="visitorMobile" maxlength="10" oninput="this.value=this.value.replace(/[^0-9]/g,'').slice(0,10)" class="field-input" placeholder="9876543210">
+                            <input id="visitorMobile" maxlength="10" oninput="let v=this.value.replace(/[^0-9]/g,'');if(v.length>0&&v[0]==='0')v=v.slice(1);this.value=v.slice(0,10);validateMobileInline(this)" class="field-input" placeholder="9876543210">
                             <p id="mobileError" class="text-xs mt-1" style="color:#dc2626;display:none;">⚠ Mobile number must be exactly 10 digits</p>
                         </div>
                         <div class="grid grid-cols-2 gap-4">
@@ -258,7 +258,7 @@
                         <div class="flex justify-between items-center mb-4">
                             <div>
                                 <h3 class="text-base font-semibold text-gray-900">Recent Visitors</h3>
-                                <p style="font-size:12px;color:#9ca3af;margin-top:1px;">Your registered visitors</p>
+                                <p style="font-size:12px;color:#9ca3af;margin-top:1px;">Registered visitors</p>
                             </div>
                             <button onclick="refreshMyVisitors()" class="btn-secondary flex items-center gap-1.5 text-xs py-1.5 px-3">
                                 <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M1 4v6h6"/><path d="M23 20v-6h-6"/><path d="M20.49 9A9 9 0 005.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 013.51 15"/></svg>
@@ -484,13 +484,19 @@ async function submitData() {
     const date        = document.getElementById("date").value;
     const time        = document.getElementById("time").value;
     const fileInput   = document.getElementById("aadhaarFile");
-    if (!visitorName || !purpose || !date || !time || aadhaar.length !== 12) return showMessage("Please fill all required fields correctly (Aadhaar must be 12 digits)", "text-red-600");
-    if (!email) return showMessage("Please enter visitor email to send confirmation", "text-red-600");
-    if (!email.toLowerCase().endsWith('@gmail.com')) return showMessage("Visitor email must be a @gmail.com address", "text-red-600");
+    if (!visitorName) return showMessage("⚠ Please enter Visitor Full Name", "text-red-600");
+    if (aadhaar.length !== 12) return showMessage("⚠ Aadhaar number must be exactly 12 digits", "text-red-600");
+    if (aadhaar[0] === '0' || aadhaar[0] === '1') return showMessage("⚠ Aadhaar number cannot start with 0 or 1", "text-red-600");
+    if (!email) return showMessage("⚠ Please enter Visitor Email", "text-red-600");
+    if (!email.toLowerCase().endsWith('@gmail.com')) return showMessage("⚠ Email must be a @gmail.com address", "text-red-600");
     const emailLocal = email.slice(0, email.toLowerCase().lastIndexOf('@gmail.com'));
-    if (!emailLocal || !/^[a-zA-Z0-9._-]+$/.test(emailLocal)) return showMessage("Email has invalid characters before @gmail.com", "text-red-600");
+    if (!emailLocal || !/^[a-zA-Z0-9._-]+$/.test(emailLocal)) return showMessage("⚠ Email has invalid characters before @gmail.com", "text-red-600");
     const mobile = document.getElementById("visitorMobile").value.trim();
-    if (!mobile || mobile.length !== 10) return showMessage("Please enter a valid 10-digit mobile number", "text-red-600");
+    if (!mobile || mobile.length !== 10) return showMessage("⚠ Please enter a valid 10-digit Mobile Number", "text-red-600");
+    if (mobile[0] === '0') return showMessage("⚠ Mobile number cannot start with 0", "text-red-600");
+    if (!purpose) return showMessage("⚠ Please enter Purpose of Visit", "text-red-600");
+    if (!date) return showMessage("⚠ Please select a Date", "text-red-600");
+    if (!time) return showMessage("⚠ Please select a Time", "text-red-600");
     const btn = document.querySelector('button[onclick="submitData()"]');
     if (btn) btn.disabled = true;
     try {
@@ -783,7 +789,7 @@ function onlyLetters(e) {
 
 function formatAadhaar(input) {
     let v = input.value.replace(/\s+/g,'').replace(/[^0-9]/g,'');
-    if (v.length > 0 && v[0] === '0') v = v.slice(1); // no leading zero
+    if (v.length > 0 && (v[0] === '0' || v[0] === '1')) v = v.slice(1); // no leading 0 or 1
     if (v.length > 12) v = v.slice(0, 12);
     let f = '';
     for (let i = 0; i < v.length; i++) { if (i > 0 && i % 4 === 0) f += ' '; f += v[i]; }
@@ -855,8 +861,8 @@ function validateAadhaarInline(input) {
     const raw = input.value.replace(/\s+/g,'');
     const digits = raw.replace(/[^0-9]/g,'');
     const err = document.getElementById("aadhaarError");
-    if (raw.length > 0 && raw[0] === '0') {
-        err.textContent = '⚠ Aadhaar cannot start with 0';
+    if (raw.length > 0 && (raw[0] === '0' || raw[0] === '1')) {
+        err.textContent = '⚠ Aadhaar cannot start with 0 or 1';
         err.style.display = '';
     } else if (digits.length > 0 && digits.length < 12) {
         err.textContent = '⚠ Aadhaar must be exactly 12 digits';
@@ -876,6 +882,15 @@ function validateEmailInline(input) {
     const localPart = val.slice(0, val.toLowerCase().lastIndexOf('@gmail.com'));
     if (localPart.length === 0) { err.textContent='⚠ Enter a name before @gmail.com'; err.style.display=''; return; }
     if (!/^[a-zA-Z0-9._-]+$/.test(localPart)) { err.textContent='⚠ Only letters, numbers, . _ - allowed before @gmail.com'; err.style.display=''; return; }
+    err.style.display='none';
+}
+
+function validateMobileInline(input) {
+    const val = input.value.trim();
+    const err = document.getElementById("mobileError");
+    if (val.length === 0) { err.style.display='none'; return; }
+    if (val[0] === '0') { err.textContent='⚠ Mobile number cannot start with 0'; err.style.display=''; return; }
+    if (val.length < 10) { err.textContent='⚠ Mobile number must be exactly 10 digits'; err.style.display=''; return; }
     err.style.display='none';
 }
 
