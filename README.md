@@ -1,13 +1,13 @@
 # Quadrant Visitor Management System
 
-A role-based visitor management application built for Quadrant Technologies. The project combines a static multi-page frontend with an AWS serverless backend to handle visitor registration, employee/admin/security workflows, status tracking, and Aadhaar document upload and retrieval.
+A role-based visitor management application built for Quadrant Technologies. This repository combines a static multi-page frontend with an AWS serverless backend to manage visitor registration, Aadhaar upload, approval workflows, and gate access.
 
-This repository is a strong portfolio-style full-stack project because it demonstrates:
+This project demonstrates:
 - Multi-role UI design for `employee`, `admin`, and `security` users
-- CRUD-style backend flows with AWS Lambda, API Gateway, DynamoDB, and S3
-- Real-world visitor lifecycle management from registration to entry and exit
-- Document upload using presigned S3 URLs
-- Dashboard-style analytics, filtering, export, and operational workflows
+- Serverless backend logic with AWS Lambda, API Gateway, DynamoDB, and S3
+- Visitor lifecycle management from registration to entry and exit
+- Secure Aadhaar document upload and retrieval with presigned S3 URLs
+- Role-based dashboards and status management
 
 ## Table Of Contents
 
@@ -15,7 +15,7 @@ This repository is a strong portfolio-style full-stack project because it demons
 - [Key Features](#key-features)
 - [Tech Stack](#tech-stack)
 - [Project Structure](#project-structure)
-- [Screenshots](#screenshots)
+- [File Guide](#file-guide)
 - [Architecture](#architecture)
 - [Application Flow](#application-flow)
 - [API Routes](#api-routes)
@@ -24,32 +24,26 @@ This repository is a strong portfolio-style full-stack project because it demons
 - [Deployment Notes](#deployment-notes)
 - [Portfolio Highlights](#portfolio-highlights)
 - [Current Limitations](#current-limitations)
-- [Future Improvements](#future-improvements)
-- [License](#license)
 
 ## Overview
 
-The system is designed to manage office visitor entries in a structured way across three internal roles:
+This system manages visitor access across three internal roles:
 
-- `Employee` users register visitors, upload Aadhaar documents, and reschedule visits
-- `Admin` users monitor all visitor records, approve or reject requests, export data, and manage registered users
-- `Security` users validate arrivals, allow or reject visitors at the gate, and mark exits
+- `Employee`: registers visitors, uploads Aadhaar documents, and tracks visits
+- `Admin`: reviews visitor requests, approves/rejects/reschedules, exports data, and manages users
+- `Security`: validates arrivals, approves or rejects entry, and records exits
 
-The frontend is built as static HTML pages with embedded CSS and JavaScript, while the backend logic is implemented in an AWS Lambda function that reads and writes data to DynamoDB and stores uploaded files in S3.
+The frontend uses static HTML, CSS, and JavaScript. The backend uses a Python AWS Lambda function that interacts with DynamoDB and S3.
 
 ## Key Features
 
-- Public landing page with role-based access entry
-- Employee-side visitor registration form
-- Aadhaar upload using S3 presigned URLs
-- Visitor ID generation and tracking
-- Admin dashboard with search, filtering, analytics, and CSV export
-- Security dashboard for entry approval and exit management
-- Reschedule workflow for existing visits
-- Role-based login checks against the users table
-- Visitor status flow including `pending`, `approved`, `rejected`, and `rescheduled`
-- Presigned document viewing for uploaded Aadhaar files
-- Email notification integration via EmailJS in the frontend
+- Public landing page with role selection
+- Employee registration form and Aadhaar upload
+- Admin dashboard with visitor approvals, status controls, and user management
+- Security dashboard for gate validation and exit tracking
+- Presigned S3 upload and download flows for Aadhaar files
+- Visitor statuses: `pending`, `approved`, `rejected`, `rescheduled`
+- EmailJS notification support in dashboards
 
 ## Tech Stack
 
@@ -58,9 +52,9 @@ The frontend is built as static HTML pages with embedded CSS and JavaScript, whi
 - HTML5
 - CSS3
 - JavaScript
-- Tailwind CSS via CDN
 - Google Fonts
 - EmailJS browser SDK
+- Tailwind CSS via CDN on dashboard pages
 
 ### Backend
 
@@ -69,65 +63,35 @@ The frontend is built as static HTML pages with embedded CSS and JavaScript, whi
 - Amazon API Gateway
 - Amazon DynamoDB
 - Amazon S3
-- `boto3`
 
 ## Project Structure
 
 ```text
 QT project/
-|-- index.html
 |-- Main.html
-|-- employee.html
-|-- admin.html
-|-- security.html
-|-- test1.html
+|-- Main Admin.html
+|-- Main employee.html
+|-- Main security.html
 |-- lambda functions.py
 |-- README.md
 ```
 
-### File Guide
+## File Guide
 
-- `index.html`: public landing page with company branding and sign-in modal
-- `Main.html`: alternate role-selection style landing page
-- `employee.html`: employee portal to register visitors and manage recent entries
-- `admin.html`: admin operations dashboard with filters, approvals, exports, and user registration
-- `security.html`: security gate dashboard for live visitor validation
-- `test1.html`: older experimental dashboard connected to a different API base URL
-- `lambda functions.py`: AWS Lambda backend for all main API routes
-
-## Screenshots
-
-You asked to include this section, so the README is ready for it. If you add images to a `screenshots/` folder, these links will work immediately.
-
-Suggested screenshot files:
-- `screenshots/landing-page.png`
-- `screenshots/employee-portal.png`
-- `screenshots/admin-dashboard.png`
-- `screenshots/security-dashboard.png`
-
-Example markdown you can keep or replace later:
-
-```md
-![Landing Page](screenshots/landing-page.png)
-![Employee Portal](screenshots/employee-portal.png)
-![Admin Dashboard](screenshots/admin-dashboard.png)
-![Security Dashboard](screenshots/security-dashboard.png)
-```
-
-Recommended screenshots to capture:
-- Landing page hero section
-- Employee visitor registration form
-- Admin visitor table with filters and analytics cards
-- Security dashboard showing approvals and exit flow
+- `Main.html`: public landing page with role selection and company branding
+- `Main Admin.html`: admin dashboard for visitor approvals and user management
+- `Main employee.html`: employee portal for visitor registration, Aadhaar upload, and visit tracking
+- `Main security.html`: security dashboard for arrival validation and exit management
+- `lambda functions.py`: AWS Lambda backend with DynamoDB and S3 integrations
 
 ## Architecture
 
 ```text
 Frontend Pages
-  |-- index.html / Main.html
-  |-- employee.html
-  |-- admin.html
-  |-- security.html
+  |-- Main.html
+  |-- Main Admin.html
+  |-- Main employee.html
+  |-- Main security.html
           |
           v
 AWS API Gateway
@@ -148,101 +112,68 @@ Visitors table
 - DynamoDB table: `Employees`
 - DynamoDB table: `Visitors`
 - S3 bucket: `visitor-images-narendra`
-- API base URL used in the main dashboards:
-  `https://4ropzko5m1.execute-api.ap-south-1.amazonaws.com`
+- Lambda CORS origin: `https://visitor-management-frontend.s3.ap-south-1.amazonaws.com`
 
 ## Application Flow
 
 ### Employee Flow
 
 1. Employee logs in with name and employee ID.
-2. Employee registers a visitor with personal and visit details.
-3. Optional Aadhaar file is uploaded to S3 using a presigned upload URL.
-4. Visitor record is saved in DynamoDB through the Lambda API.
-5. Employee can view registered visitors and reschedule visits.
+2. Employee registers a visitor with visit details.
+3. Aadhaar document is uploaded to S3 using a presigned URL.
+4. Visitor data is saved to DynamoDB.
+5. Employee can view and reschedule visitor records.
 
 ### Admin Flow
 
-1. Admin logs in using a registered admin account.
-2. Admin reviews all visitors from the database.
-3. Admin approves, rejects, reschedules, or exports visitor data.
-4. Admin can also register internal users for `employee` and `security` roles.
+1. Admin logs in with a registered admin account.
+2. Admin reviews visitor requests and user records.
+3. Admin approves, rejects, or reschedules visitors.
+4. Admin can register internal users for employee and security roles.
 
 ### Security Flow
 
 1. Security user logs in with valid credentials.
-2. Security views visitors scheduled for the day or selected period.
-3. Security allows or rejects arrivals.
-4. Security marks exit time after visit completion.
-5. Security can inspect uploaded Aadhaar documents using presigned access URLs.
+2. Security views visitor schedules and gate requests.
+3. Security approves or rejects entry.
+4. Security records exit time.
+5. Security can view uploaded Aadhaar documents via presigned links.
 
 ## API Routes
 
-The backend Lambda currently supports the following routes:
+The Lambda backend supports these routes:
 
 | Method | Route | Purpose |
 |---|---|---|
 | `GET` | `/user` | List registered users |
 | `POST` | `/user` | Register a new internal user |
 | `DELETE` | `/user` | Delete a user by `emp_id` |
-| `GET` | `/visitors` | List all visitor records |
-| `GET` | `/admin` | Alternate route returning visitor records |
+| `GET` | `/visitors` | List visitor records |
+| `GET` | `/admin` | List visitor records (alternate route) |
 | `POST` | `/register` | Register a new visitor |
 | `PUT` | `/register` | Reschedule an existing visit |
-| `POST` | `/approve` | Update visitor status and save in/out times |
-| `GET` | `/upload-url` | Generate presigned S3 upload URL |
-| `GET` | `/aadhaar` | Generate presigned S3 download URL |
-| `GET` | `/presigned` | Alternate Aadhaar download route |
-| `POST` | `/aadhaar-key` | Save uploaded S3 object key to DynamoDB |
+| `POST` | `/approve` | Update visitor status and in/out times |
+| `GET` | `/upload-url` | Create presigned S3 upload URL |
+| `GET` | `/aadhaar` | Create presigned S3 download URL |
+| `GET` | `/presigned` | Alternate presigned download route |
+| `POST` | `/aadhaar-key` | Save uploaded Aadhaar S3 key |
 
 ## AWS Setup Guide
 
-This section gives you a practical path to recreate the backend environment.
-
 ### 1. Create DynamoDB Tables
 
-Create these two tables:
-
 #### `Employees`
+- Partition key: `emp_id` (`String`)
 
-- Partition key: `emp_id` as `String`
-
-Suggested attributes stored by the app:
+Fields:
 - `emp_id`
 - `name`
 - `role`
 
-Example items:
-
-```json
-{
-  "emp_id": "EMP001",
-  "name": "Narendra",
-  "role": "employee"
-}
-```
-
-```json
-{
-  "emp_id": "ADM001",
-  "name": "Admin User",
-  "role": "admin"
-}
-```
-
-```json
-{
-  "emp_id": "SEC001",
-  "name": "Security User",
-  "role": "security"
-}
-```
-
 #### `Visitors`
+- Partition key: `visitor_id` (`String`)
 
-- Partition key: `visitor_id` as `String`
-
-Common fields used by the frontend:
+Fields used by the frontend:
 - `visitor_id`
 - `name`
 - `aadhaar`
@@ -260,39 +191,31 @@ Common fields used by the frontend:
 - `in_time`
 - `out_time`
 
-### 2. Create S3 Bucket
+### 2. Create the S3 Bucket
 
-Create an S3 bucket for Aadhaar uploads. The code currently expects:
+The backend expects:
 
 ```text
 visitor-images-narendra
 ```
 
-If you use a different bucket name, update the `S3_BUCKET` constant in `lambda functions.py`.
+If you use another bucket name, update `S3_BUCKET` in `lambda functions.py`.
 
-Stored object key pattern:
+Uploaded object key pattern:
 
 ```text
 aadhaar/<visitor_id>.<ext>
 ```
 
-### 3. Create The Lambda Function
+### 3. Deploy the Lambda Function
 
 - Runtime: Python 3.x
-- Upload the code from `lambda functions.py`
-- Attach an IAM role with permissions for:
-  - `dynamodb:GetItem`
-  - `dynamodb:PutItem`
-  - `dynamodb:UpdateItem`
-  - `dynamodb:DeleteItem`
-  - `dynamodb:Scan`
-  - `s3:GetObject`
-  - `s3:PutObject`
+- Upload `lambda functions.py`
+- Grant IAM permissions for DynamoDB and S3 operations
 
 ### 4. Configure API Gateway
 
-Expose the Lambda function through API Gateway routes that match the frontend:
-
+Expose the following routes:
 - `/user`
 - `/visitors`
 - `/admin`
@@ -303,114 +226,87 @@ Expose the Lambda function through API Gateway routes that match the frontend:
 - `/presigned`
 - `/aadhaar-key`
 
-Enable `GET`, `POST`, `PUT`, `DELETE`, and `OPTIONS` as needed.
+Enable the required methods and `OPTIONS`.
 
 ### 5. Configure CORS
 
-The Lambda currently uses a fixed allowed origin:
+Current allowed origin:
 
 ```python
 'Access-Control-Allow-Origin': 'https://visitor-management-frontend.s3.ap-south-1.amazonaws.com'
 ```
 
-If your frontend is hosted somewhere else, update the CORS origin in the Lambda code.
+If your frontend is hosted elsewhere, update this origin in `lambda functions.py`.
 
-### 6. Update Frontend API Base URL
+### 6. Update Frontend API URL
 
-The HTML dashboards contain hardcoded API endpoints. If your deployed API changes, update the `API_BASE` or `BASE_URL` constants in:
-
-- `employee.html`
-- `admin.html`
-- `security.html`
-- `test1.html`
+Update the hardcoded API base URL in:
+- `Main employee.html`
+- `Main Admin.html`
+- `Main security.html`
 
 ### 7. Configure EmailJS
 
-The employee and admin flows reference EmailJS for notifications. To make email work:
-
+The dashboards use EmailJS for notifications. To enable it:
 1. Create an EmailJS account
-2. Create the service and templates you need
-3. Replace the hardcoded EmailJS keys or template IDs in the frontend files
-4. Test new registration and reschedule email flows
+2. Create a service/template
+3. Replace keys/template IDs in the frontend
+4. Test email notifications
 
 ## Local Run Guide
 
-This project has no build step and no package installation step.
-
 ### Option 1: Open Directly
 
-You can open the static pages directly in a browser:
+Open these files in a browser:
+- `Main.html`
+- `Main Admin.html`
+- `Main employee.html`
+- `Main security.html`
 
-```powershell
-start index.html
-```
-
-### Option 2: Serve With A Simple Static Server
+### Option 2: Serve Locally
 
 ```powershell
 python -m http.server 8080
 ```
 
-Then open:
-
-- `http://localhost:8080/index.html`
+Then visit:
 - `http://localhost:8080/Main.html`
-- `http://localhost:8080/employee.html`
-- `http://localhost:8080/admin.html`
-- `http://localhost:8080/security.html`
+- `http://localhost:8080/Main Admin.html`
+- `http://localhost:8080/Main employee.html`
+- `http://localhost:8080/Main security.html`
 
 ## Deployment Notes
 
-### Frontend Deployment
+### Frontend
+- Deploy the HTML files to static hosting such as S3, Netlify, or GitHub Pages
+- Update API base URLs to your live API gateway
+- Match the frontend domain with Lambda CORS settings
 
-- Deploy the HTML files to Amazon S3 static hosting, Netlify, GitHub Pages, or another static host
-- Make sure the API base URL constants point to your live API Gateway endpoint
-- Match the frontend domain with the Lambda CORS configuration
-
-### Backend Deployment
-
-- Deploy the Lambda behind API Gateway
-- Ensure the DynamoDB tables exist with the expected partition keys
-- Ensure the S3 bucket exists and the Lambda IAM role can access it
-- Keep the region consistent with your deployed bucket and API Gateway
+### Backend
+- Deploy Lambda behind API Gateway
+- Ensure DynamoDB tables and S3 bucket exist
+- Ensure Lambda has permissions to access DynamoDB and S3
+- Keep the region consistent across resources
 
 ## Portfolio Highlights
 
-If you are using this project in a resume, LinkedIn, or portfolio, these are the strongest talking points:
-
-- Built a multi-role visitor management system supporting employee, admin, and security workflows
-- Designed and integrated a serverless backend using AWS Lambda, API Gateway, DynamoDB, and S3
-- Implemented presigned S3 upload and download flows for secure visitor document handling
-- Developed dashboard interfaces with filtering, analytics cards, CSV export, and status management
-- Created an end-to-end visit lifecycle covering registration, approval, rejection, rescheduling, entry, and exit
-- Integrated email notifications for visitor communication workflows
+Project strengths:
+- Multi-role visitor management system for employee, admin, and security users
+- Serverless backend using AWS Lambda, API Gateway, DynamoDB, and S3
+- Presigned S3 upload/download for secure Aadhaar handling
+- Dashboard interfaces with filters, analytics, and status controls
+- End-to-end visitor lifecycle from registration to exit
 
 Suggested resume bullet:
 
 ```text
-Built a role-based visitor management system using HTML, JavaScript, AWS Lambda, API Gateway, DynamoDB, and S3, enabling visitor registration, approval workflows, Aadhaar document uploads, and operational dashboards for employee, admin, and security teams.
+Built a role-based visitor management system using HTML, JavaScript, AWS Lambda, API Gateway, DynamoDB, and S3, enabling secure visitor registration, approval workflows, Aadhaar document uploads, and operational dashboards for employee, admin, and security teams.
 ```
 
 ## Current Limitations
 
-- Configuration is hardcoded across multiple HTML files and the Lambda script
-- Authentication is client-side and should not be considered production-grade security
-- `test1.html` uses a different API endpoint than the main dashboards
-- CSS and JavaScript are embedded inline rather than split into reusable assets
-- There is no automated testing or CI setup in the repository
-- The repository currently does not include screenshots or infrastructure-as-code
-
-## Future Improvements
-
-- Move shared constants into a central configuration file
-- Replace client-side login checks with secure authentication and authorization
-- Split inline CSS and JavaScript into separate files
-- Add Terraform, AWS SAM, or CloudFormation for infrastructure setup
-- Add a `.gitignore`, deployment scripts, and environment-based config management
-- Add screenshot assets for a stronger GitHub presentation
-- Add audit logging and better role-based permission controls
-- Add pagination and server-side filtering at the API layer
-
-## License
-
-No license file is currently included in this repository.
+- Configuration is hardcoded in the frontend and Lambda scripts
+- Authentication is client-side only and not production-grade
+- CSS and JavaScript are embedded inline instead of separate assets
+- No automated tests or CI/CD setup included
+- Repository does not include screenshots or infrastructure-as-code
